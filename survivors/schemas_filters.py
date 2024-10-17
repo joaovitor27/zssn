@@ -14,4 +14,12 @@ class SurvivorFilter(FilterSchema):
     updated_before: Optional[str] = None
 
 
-
+class InventoryFilter(FilterSchema):
+    item: Optional[str] = None
+    points: Optional[int] = None
+    survivors_name: Optional[str] = None
+    survivors_id: Optional[int] = None
+    created_after: Optional[str] = None
+    created_before: Optional[str] = None
+    updated_after: Optional[str] = None
+    updated_before: Optional[str] = None
