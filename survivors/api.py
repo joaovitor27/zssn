@@ -4,20 +4,18 @@ from django.shortcuts import get_object_or_404
 from ninja import Router, Query
 from ninja.pagination import paginate, PageNumberPagination
 
-from survivors.models import Survivor, Item, Inventory
-from survivors.schemas_filters import SurvivorFilter, InventoryFilter
-from survivors.schemas_models import SurvivorSchema, SurvivorCreateSchema, SurvivorUpdateSchema, \
-    InventorySurvivorSchema, InventorySurvivorUpdateSchema
+from survivors.models import Survivor
+from survivors.pagination import CustomPagination
+from survivors.schemas_filters import SurvivorFilter
+from survivors.schemas_models import SurvivorSchema, SurvivorCreateSchema, SurvivorUpdateSchema
 
 router = Router()
 
 
 @router.get("survivors", response=List[SurvivorSchema])
-@paginate(PageNumberPagination, page_size=10)
+@paginate(CustomPagination)
 def list_survivors(request, filters: SurvivorFilter = Query(...)):
-    survivors = Survivor.objects.all()
-    survivors = filters.filter(survivors)
-    return survivors
+    return filters.filter(Survivor.objects.all())
 
 
 @router.get("survivors/{id}", response=SurvivorSchema)
@@ -27,7 +25,8 @@ def get_survivor(request, id: int):
 
 @router.post("survivors", response=SurvivorSchema)
 def create_survivor(request, data: SurvivorCreateSchema):
-    return Survivor.objects.create(**data.dict())
+    teste = Survivor.objects.create(**data.dict())
+    return teste
 
 
 @router.put("survivors/{id}", response=SurvivorSchema)

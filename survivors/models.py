@@ -17,7 +17,6 @@ class Survivor(models.Model):
     latitude = models.FloatField(verbose_name=_('Latitude'))
     longitude = models.FloatField(verbose_name=_('Longitude'))
     infected = models.BooleanField(verbose_name=_('Infectado'), default=False)
-    items = models.ManyToManyField('Item', verbose_name=_('Itens'), through='Inventory')
     reports = models.ManyToManyField('self', verbose_name=_('Denúncias'), through='Report', symmetrical=False)
     created_at = models.DateTimeField(verbose_name=_('Criado em'), auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name=_('Atualizado em'), auto_now=True)
@@ -36,20 +35,33 @@ class Survivor(models.Model):
     def __str__(self):
         return self.name
 
-    def is_infected(self):
-        return self.infected
-
     def get_age(self):
         from datetime import date
-        return date.today().year - self.date_of_birth.year
+        today = date.today()
+        age = today.year - self.date_of_birth.year
+        if (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day):
+            age -= 1
+        return age
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            self.infected = self.reports.count() >= 3
+        super().save(*args, **kwargs)
+        Inventory.objects.get_or_create(survivor=self)
+
 
 
 class Item(models.Model):
+    WATER = 'Água'
+    FOOD = 'Comida'
+    MEDICATION = 'Medicação'
+    AMMO = 'Munição'
+
     NAME_CHOICES = (
-        ('Água', _('Água')),
-        ('Comida', _('Comida')),
-        ('Medicação', _('Medicação')),
-        ('Munição', _('Munição'))
+        (WATER, _('Água')),
+        (FOOD, _('Comida')),
+        (MEDICATION, _('Medicação')),
+        (AMMO, _('Munição')),
     )
 
     name = models.CharField(verbose_name=_('Nome'), max_length=100, choices=NAME_CHOICES)
@@ -69,10 +81,31 @@ class Item(models.Model):
         return self.name
 
 
-class Inventory(models.Model):
-    survivor = models.ForeignKey(Survivor, verbose_name=_('Sobrevivente'), on_delete=models.CASCADE)
+class ItemInventory(models.Model):
     item = models.ForeignKey(Item, verbose_name=_('Item'), on_delete=models.CASCADE)
+    inventory = models.ForeignKey('Inventory', verbose_name=_('Inventário'), on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(verbose_name=_('Quantidade'))
+    created_at = models.DateTimeField(verbose_name=_('Criado em'), auto_now_add=True)
+    updated_at = models.DateTimeField(verbose_name=_('Atualizado em'), auto_now=True)
+
+    class Meta:
+        db_table = 'items_inventories'
+        verbose_name = _('Item no Inventário')
+        verbose_name_plural = _('Itens no Inventário')
+        indexes = [
+            models.Index(fields=['item']),
+            models.Index(fields=['inventory']),
+            models.Index(fields=['quantity']),
+            models.Index(fields=['created_at', 'updated_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.item.name} - {self.inventory.survivor.name}'
+
+
+class Inventory(models.Model):
+    survivor = models.OneToOneField(Survivor, verbose_name=_('Sobrevivente'), on_delete=models.CASCADE)
+    items = models.ManyToManyField(Item, through='ItemInventory')
     created_at = models.DateTimeField(verbose_name=_('Criado em'), auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name=_('Atualizado em'), auto_now=True)
 
@@ -81,13 +114,12 @@ class Inventory(models.Model):
         verbose_name = _('Inventário')
         verbose_name_plural = _('Inventários')
         indexes = [
-            models.Index(fields=['survivor', 'item']),
-            models.Index(fields=['quantity']),
+            models.Index(fields=['survivor']),
             models.Index(fields=['created_at', 'updated_at']),
         ]
 
     def __str__(self):
-        return f'{self.survivor.name} - {self.item.name}'
+        return f'Inventário de {self.survivor.name}'
 
 
 class Report(models.Model):
@@ -109,56 +141,3 @@ class Report(models.Model):
 
     def __str__(self):
         return f'{self.reporter.name} - {self.reported.name}'
-
-
-class Trade(models.Model):
-    requester = models.ForeignKey(Survivor, verbose_name=_('Solicitante'), on_delete=models.CASCADE,
-                                  related_name='requester')
-    requested = models.ForeignKey(Survivor, verbose_name=_('Solicitado'), on_delete=models.CASCADE,
-                                  related_name='requested')
-    items_requester = models.ManyToManyField(Item, verbose_name=_('Itens Solicitante'), through='TradeItemRequester',
-                                             related_name='items_requester')
-    items_requested = models.ManyToManyField(Item, verbose_name=_('Itens Solicitado'), through='TradeItemRequested',
-                                             related_name='items_requested')
-    status = models.BooleanField(verbose_name=_('Status'), default=False)
-    created_at = models.DateTimeField(verbose_name=_('Criado em'), auto_now_add=True)
-    updated_at = models.DateTimeField(verbose_name=_('Atualizado em'), auto_now=True)
-
-    class Meta:
-        db_table = 'trades'
-        verbose_name = _('Troca')
-        verbose_name_plural = _('Trocas')
-        indexes = [
-            models.Index(fields=['requester', 'requested']),
-            models.Index(fields=['status']),
-            models.Index(fields=['created_at', 'updated_at']),
-        ]
-
-    def __str__(self):
-        return f'{self.requester.name} - {self.requested.name}'
-
-
-class TradeItemRequester(models.Model):
-    trade = models.ForeignKey(Trade, verbose_name=_('Troca'), on_delete=models.CASCADE)
-    item = models.ForeignKey(Item, verbose_name=_('Item'), on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(verbose_name=_('Quantidade'))
-    created_at = models.DateTimeField(verbose_name=_('Criado em'), auto_now_add=True)
-    updated_at = models.DateTimeField(verbose_name=_('Atualizado em'), auto_now=True)
-
-    class Meta:
-        db_table = 'trade_items_requester'
-        verbose_name = _('Item do Solicitante')
-        verbose_name_plural = _('Itens do Solicitante')
-
-
-class TradeItemRequested(models.Model):
-    trade = models.ForeignKey(Trade, verbose_name=_('Troca'), on_delete=models.CASCADE)
-    item = models.ForeignKey(Item, verbose_name=_('Item'), on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField(verbose_name=_('Quantidade'))
-    created_at = models.DateTimeField(verbose_name=_('Criado em'), auto_now_add=True)
-    updated_at = models.DateTimeField(verbose_name=_('Atualizado em'), auto_now=True)
-
-    class Meta:
-        db_table = 'trade_items_requested'
-        verbose_name = _('Item do Solicitado')
-        verbose_name_plural = _('Itens do Solicitado')

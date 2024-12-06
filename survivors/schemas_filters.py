@@ -1,17 +1,16 @@
+from datetime import date
 from typing import Optional
 
-from ninja import FilterSchema
+from ninja import FilterSchema, Field
 
 
 class SurvivorFilter(FilterSchema):
-    name: Optional[str] = None
     age: Optional[int] = None
-    sex: Optional[str] = None
-    infected: Optional[bool] = None
-    created_after: Optional[str] = None
-    created_before: Optional[str] = None
-    updated_after: Optional[str] = None
-    updated_before: Optional[str] = None
+    name: Optional[str] = Field(None, q='name__icontains')
+    sex: Optional[str] = Field(None, q='sex')
+    infected: Optional[bool] = Field(None, q='infected')
+    from_date: Optional[date] = Field(None, q='created_at__date__gte')
+    to_date: Optional[date] = Field(None, q='created_at__date__lte')
 
 
 class InventoryFilter(FilterSchema):
@@ -19,7 +18,5 @@ class InventoryFilter(FilterSchema):
     points: Optional[int] = None
     survivors_name: Optional[str] = None
     survivors_id: Optional[int] = None
-    created_after: Optional[str] = None
-    created_before: Optional[str] = None
-    updated_after: Optional[str] = None
-    updated_before: Optional[str] = None
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None

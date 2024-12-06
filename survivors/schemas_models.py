@@ -1,51 +1,59 @@
-from typing import List, Optional
+from typing import List
 
 from ninja import ModelSchema
 
-from survivors.models import Survivor, Inventory, Item
+from survivors.models import Survivor, Inventory, Item, ItemInventory, Report
+
+
+class ReportSchema(ModelSchema):
+    class Meta:
+        model = Report
+        fields = '__all__'
+
+
+class ItemSchema(ModelSchema):
+    class Meta:
+        model = Item
+        fields = 'id', 'name', 'points'
 
 
 class ItemInventorySchema(ModelSchema):
-    class Meta:
-        model = Item
-        fields = '__all__'
-        exclude = ['created_at', 'updated_at']
-
-
-class InventorySurvivorUpdateSchema(ModelSchema):
-    class Meta:
-        model = Inventory
-        fields = '__all__'
-        exclude = ['id', 'created_at', 'item', 'updated_at']
-
-
-class InventorySurvivorSchema(ModelSchema):
-    item: ItemInventorySchema
+    item: ItemSchema
 
     class Meta:
-        model = Inventory
+        model = ItemInventory
         fields = '__all__'
-        exclude = ['survivor']
+
+
+class InventorySchema(ModelSchema):
+    item: ItemSchema
+
+    class Meta:
+        model = ItemInventory
+        fields = '__all__'
+        exclude = ['created_at', 'updated_at', 'inventory']
 
 
 class SurvivorSchema(ModelSchema):
-    items: List[InventorySurvivorSchema]
+    inventory: List[InventorySchema]
+    reports: List[ReportSchema]
 
     class Meta:
         model = Survivor
         fields = '__all__'
 
-
-class InventorySurvivorCreateSchema(ModelSchema):
-    class Meta:
-        model = Inventory
-        fields = '__all__'
-        exclude = ['id', 'survivor', 'created_at', 'updated_at']
+    @staticmethod
+    def resolve_inventory(obj: Survivor) -> InventorySchema | None:
+        """
+        Método que resolve o relacionamento OneToOne com o modelo Inventory.
+        Retorna o schema do inventário associado ao sobrevivente.
+        """
+        if obj.inventory:
+            return InventorySchema.from_orm(obj.inventory)
+        return None
 
 
 class SurvivorCreateSchema(ModelSchema):
-    items: Optional[List[InventorySurvivorCreateSchema]]
-
     class Meta:
         model = Survivor
         fields = '__all__'
@@ -56,10 +64,3 @@ class SurvivorUpdateSchema(ModelSchema):
     class Meta:
         model = Survivor
         fields = ['latitude', 'longitude']
-
-
-class InventorySchema(ModelSchema):
-    class Meta:
-        model = Inventory
-        fields = '__all__'
-        exclude = ['survivor']
