@@ -83,7 +83,6 @@ class Item(models.Model):
 
 class ItemInventory(models.Model):
     item = models.ForeignKey(Item, verbose_name=_('Item'), on_delete=models.CASCADE)
-    inventory = models.ForeignKey('Inventory', verbose_name=_('Inventário'), on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(verbose_name=_('Quantidade'))
     created_at = models.DateTimeField(verbose_name=_('Criado em'), auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name=_('Atualizado em'), auto_now=True)
@@ -94,18 +93,17 @@ class ItemInventory(models.Model):
         verbose_name_plural = _('Itens no Inventário')
         indexes = [
             models.Index(fields=['item']),
-            models.Index(fields=['inventory']),
             models.Index(fields=['quantity']),
             models.Index(fields=['created_at', 'updated_at']),
         ]
 
     def __str__(self):
-        return f'{self.item.name} - {self.inventory.survivor.name}'
+        return f'{self.item.name}'
 
 
 class Inventory(models.Model):
     survivor = models.OneToOneField(Survivor, verbose_name=_('Sobrevivente'), on_delete=models.CASCADE)
-    items = models.ManyToManyField(Item, through='ItemInventory')
+    items = models.ManyToManyField(ItemInventory, verbose_name=_('Items'), related_name='items')
     created_at = models.DateTimeField(verbose_name=_('Criado em'), auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name=_('Atualizado em'), auto_now=True)
 

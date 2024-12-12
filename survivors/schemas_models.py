@@ -26,16 +26,17 @@ class ItemInventorySchema(ModelSchema):
 
 
 class InventorySchema(ModelSchema):
-    item: ItemSchema
+    items: List[ItemInventorySchema]
+    survivor_id: int
 
     class Meta:
-        model = ItemInventory
+        model = Inventory
         fields = '__all__'
-        exclude = ['created_at', 'updated_at', 'inventory']
+        exclude = ['created_at', 'updated_at', 'survivor']
 
 
 class SurvivorSchema(ModelSchema):
-    inventory: List[InventorySchema]
+    inventory: InventorySchema
     reports: List[ReportSchema]
 
     class Meta:
