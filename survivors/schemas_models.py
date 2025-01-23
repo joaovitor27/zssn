@@ -44,6 +44,15 @@ class SurvivorSchema(ModelSchema):
         fields = '__all__'
 
     @staticmethod
+    def resolve_reports(obj: Survivor) -> List[ReportSchema]:
+        """
+        Método que resolve o relacionamento ManyToMany com o modelo Report.
+        Retorna uma lista de schemas de relatórios associados ao sobrevivente.
+        """
+        reports = obj.reported.all()  # ou obj.reporter.all(), dependendo do relacionamento desejado
+        return [ReportSchema.from_orm(report) for report in reports]
+
+    @staticmethod
     def resolve_inventory(obj: Survivor) -> InventorySchema | None:
         """
         Método que resolve o relacionamento OneToOne com o modelo Inventory.
@@ -62,6 +71,9 @@ class SurvivorCreateSchema(ModelSchema):
 
 
 class SurvivorUpdateSchema(ModelSchema):
+    latitude: float
+    longitude: float
+
     class Meta:
         model = Survivor
         fields = ['latitude', 'longitude']
